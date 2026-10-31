@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VoltWheels - Orderry Analytics Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome para iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white !important; padding: 0 !important; }
+            .print-shadow { box-shadow: none !important; border: 1px solid #e2e8f0 !important; }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen">
+
+    <!-- Encabezado Superior -->
+    <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-indigo-600 p-2 rounded-xl text-white">
+                    <i class="fa-solid fa-bolt text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg tracking-tight">VoltWheels <span class="text-indigo-400 font-normal text-sm">| Orderry v2 Analytics</span></h1>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-3">
+                <!-- Botón de Navegación / Menú entre vistas -->
+                <div class="relative">
+                    <button onclick="toggleMenuNavegacion()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-2 rounded-xl text-sm font-medium transition flex items-center space-x-2 shadow-sm">
+                        <i class="fa-solid fa-bars"></i>
+                        <span class="hidden sm:inline">Menú Apps</span>
+                    </button>
+                    <!-- Menú Desplegable -->
+                    <div id="menuNavegacion" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl py-2 border border-slate-100 z-50 text-slate-700">
+                        <a href="index.html" class="flex items-center px-4 py-2.5 text-sm font-semibold bg-indigo-50 text-indigo-700">
+                            <i class="fa-solid fa-clipboard-list w-5 mr-2"></i> Órdenes de Taller
+                        </a>
+                        <a href="finanzas.html" class="flex items-center px-4 py-2.5 text-sm hover:bg-slate-50 transition">
+                            <i class="fa-solid fa-cash-register w-5 mr-2 text-emerald-600"></i> Finanzas / Caja
+                        </a>
+                    </div>
+                </div>
+
+                <span id="connectionStatus" class="hidden sm:inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                    <span class="w-2 h-2 mr-1.5 bg-amber-400 rounded-full animate-pulse"></span> Sin Configurar
+                </span>
+                <button onclick="abrirConfig()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3.5 py-2 rounded-xl text-sm font-medium transition flex items-center space-x-2 border border-slate-700">
+                    <i class="fa-solid fa-key"></i>
+                    <span class="hidden sm:inline">Token API</span>
+                </button>
+                <button onclick="sincronizarDatos()" id="btnSync" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl text-sm font-medium transition flex items-center space-x-2 shadow-sm">
+                    <i class="fa-solid fa-rotate" id="syncIcon"></i>
+                    <span>Sincronizar</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Contenedor Principal -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+        <!-- Banner de Bienvenida -->
+        <div id="welcomeBanner" class="bg-gradient-to-r from-indigo-900 to-slate-900 text-white p-6 rounded-2xl shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div class="space-y-2">
+                <h2 class="text-xl font-bold flex items-center gap-2">
+                    <span>⚡ Generador de Informes Orderry (API v2)</span>
+                </h2>
+                <p class="text-indigo-200 text-sm max-w-2xl">
+                    El proxy de Cloudflare está configurado automáticamente. Ingresa tu Token de API para sincronizar todas las órdenes de tu taller.
+                </p>
+            </div>
+            <button onclick="abrirConfig()" class="bg-white text-indigo-900 hover:bg-indigo-50 px-5 py-2.5 rounded-xl font-semibold text-sm transition shadow whitespace-nowrap">
+                Ingresar Token
+            </button>
+        </div>
+
+        <!-- Tarjetas de Métricas (KPIs) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 print-shadow">
+                <div class="flex items-center justify-between text-slate-500 mb-2">
+                    <span class="text-xs font-bold uppercase tracking-wider">Órdenes Totales</span>
+                    <div class="p-2 bg-indigo-50 text-indigo-600 rounded-xl"><i class="fa-solid fa-clipboard-list"></i></div>
+                </div>
+                <h3 class="text-3xl font-extrabold text-slate-900" id="kpiTotalOrdenes">0</h3>
+                <p class="text-xs text-slate-400 mt-1">Historial completo</p>
+            </div>
+            
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 print-shadow">
+                <div class="flex items-center justify-between text-slate-500 mb-2">
+                    <span class="text-xs font-bold uppercase tracking-wider">Ingresos Estimados</span>
+                    <div class="p-2 bg-emerald-50 text-emerald-600 rounded-xl"><i class="fa-solid fa-wallet"></i></div>
+                </div>
+                <h3 class="text-3xl font-extrabold text-slate-900" id="kpiIngresos">$0.00</h3>
+                <p class="text-xs text-emerald-600 font-medium mt-1">Calculado de órdenes</p>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 print-shadow">
+                <div class="flex items-center justify-between text-slate-500 mb-2">
+                    <span class="text-xs font-bold uppercase tracking-wider">Equipos Entregados</span>
+                    <div class="p-2 bg-blue-50 text-blue-600 rounded-xl"><i class="fa-solid fa-circle-check"></i></div>
+                </div>
+                <h3 class="text-3xl font-extrabold text-slate-900" id="kpiEntregados">0</h3>
+                <p class="text-xs text-blue-600 font-medium mt-1" id="kpiTasaEficiencia">0% completado</p>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 print-shadow">
+                <div class="flex items-center justify-between text-slate-500 mb-2">
+                    <span class="text-xs font-bold uppercase tracking-wider">En Proceso / Nuevos</span>
+                    <div class="p-2 bg-amber-50 text-amber-600 rounded-xl"><i class="fa-solid fa-screwdriver-wrench"></i></div>
+                </div>
+                <h3 class="text-3xl font-extrabold text-slate-900" id="kpiEnProceso">0</h3>
+                <p class="text-xs text-slate-400 mt-1">Equipos en banco</p>
+            </div>
+        </div>
+
+        <!-- Gráficos -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 print-shadow">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="font-bold text-slate-800 text-base">Distribución por Estados</h2>
+                    <span class="text-xs text-slate-400">Orderry API v2</span>
+                </div>
+                <div class="relative h-72 flex justify-center">
+                    <canvas id="chartEstados"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 print-shadow">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="font-bold text-slate-800 text-base">Ingresos por Orden</h2>
+                    <button onclick="window.print()" class="no-print text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-print"></i> Imprimir Reporte
+                    </button>
+                </div>
+                <div class="relative h-72">
+                    <canvas id="chartIngresos"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabla -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden print-shadow">
+            <div class="p-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h2 class="font-bold text-slate-800 text-base">Listado de Órdenes de Trabajo</h2>
+                    <p class="text-xs text-slate-500">Datos sincronizados API v2 (Historial Completo)</p>
+                </div>
+                <div class="flex items-center gap-3 w-full sm:w-auto">
+                    <input type="text" id="searchInput" onkeyup="filtrarTabla()" placeholder="Buscar por cliente, equipo, orden..." class="w-full sm:w-64 bg-slate-50 border border-slate-200 text-sm rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-slate-50/75 text-slate-500 uppercase text-xs tracking-wider border-b border-slate-100">
+                            <th class="py-3.5 px-6 font-semibold">No. Orden</th>
+                            <th class="py-3.5 px-6 font-semibold">Fecha</th>
+                            <th class="py-3.5 px-6 font-semibold">Cliente</th>
+                            <th class="py-3.5 px-6 font-semibold">Dispositivo / Equipo</th>
+                            <th class="py-3.5 px-6 font-semibold">Estado</th>
+                            <th class="py-3.5 px-6 font-semibold text-right">Total ($)</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 text-slate-700" id="tablaOrdenesCuerpo">
+                        <tr>
+                            <td colspan="6" class="py-12 text-center text-slate-400">
+                                <i class="fa-solid fa-folder-open text-3xl mb-2 block"></i>
+                                Sin datos sincronizados. Configura tu Token.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modal de Configuración -->
+    <div id="configModal" class="fixed inset-0 z-50 bg-slate-900/65 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-6">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-4">
+                <h3 class="font-bold text-lg text-slate-900 flex items-center gap-2">
+                    <i class="fa-solid fa-key text-indigo-600"></i> Token de API Orderry
+                </h3>
+                <button onclick="cerrarConfig()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+            </div>
+            
+            <div class="space-y-4 text-sm">
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Bearer Token</label>
+                    <input type="password" id="inputApiKey" placeholder="Ingresa tu token..." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <p class="text-xs text-slate-400 mt-1">El Worker ya está integrado de forma fija.</p>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-2">
+                <button onclick="cerrarConfig()" class="px-4 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 font-medium transition">Cancelar</button>
+                <button onclick="guardarConfig()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-medium transition shadow-sm">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script Principal con Paginación Automática -->
+    <script>
+        let chartEstadosInstance = null;
+        let chartIngresosInstance = null;
+        let datosOrdenesGlobales = [];
+
+        // URL fija de tu Cloudflare Worker
+        const URL_PROXY_FIJA = "https://orderry-proxy-voltwheels.machariel-p-f.workers.dev";
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const apiKey = localStorage.getItem('orderry_api_key');
+            if (apiKey) document.getElementById('inputApiKey').value = apiKey;
+
+            if (apiKey) {
+                document.getElementById('connectionStatus').className = "hidden sm:inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
+                document.getElementById('connectionStatus').innerHTML = '<span class="w-2 h-2 mr-1.5 bg-emerald-400 rounded-full"></span> Conectado (v2)';
+                document.getElementById('welcomeBanner').style.display = 'none';
+                sincronizarDatos();
+            }
+            inicializarGraficosDefault();
+
+            window.addEventListener('click', (e) => {
+                const menu = document.getElementById('menuNavegacion');
+                const btn = e.target.closest('button');
+                if (!btn && !menu.contains(e.target)) {
+                    menu.classList.add('hidden');
+                }
+            });
+        });
+
+        function toggleMenuNavegacion() {
+            const menu = document.getElementById('menuNavegacion');
+            menu.classList.toggle('hidden');
+        }
+
+        function abrirConfig() { document.getElementById('configModal').classList.remove('hidden'); }
+        function cerrarConfig() { document.getElementById('configModal').classList.add('hidden'); }
+
+        function guardarConfig() {
+            const apiKey = document.getElementById('inputApiKey').value.trim();
+            if (!apiKey) {
+                alert('Por favor ingresa tu Token de API.');
+                return;
+            }
+            localStorage.setItem('orderry_api_key', apiKey);
+            
+            document.getElementById('connectionStatus').className = "hidden sm:inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
+            document.getElementById('connectionStatus').innerHTML = '<span class="w-2 h-2 mr-1.5 bg-emerald-400 rounded-full"></span> Conectado (v2)';
+            document.getElementById('welcomeBanner').style.display = 'none';
+            
+            cerrarConfig();
+            sincronizarDatos();
+        }
+
+        // Sincronización con paginación automática para traer las ~700 órdenes
+        async function sincronizarDatos() {
+            const apiKey = localStorage.getItem('orderry_api_key');
+            if (!apiKey) {
+                abrirConfig();
+                return;
+            }
+
+            const icon = document.getElementById('syncIcon');
+            if (icon) icon.classList.add('fa-spin');
+            
+            try {
+                datosOrdenesGlobales = [];
+                let paginaActual = 1;
+                let totalPaginas = 1;
+
+                do {
+                    const response = await fetch(`${URL_PROXY_FIJA}/v2/orders?page=${paginaActual}&limit=100`, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${apiKey}`,
+                            'Accept': 'application/json'
+                        }
+                    });
+
+                    if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
+                    const data = await response.json();
+                    
+                    let items = data.data || data.orders || (Array.isArray(data) ? data : []);
+                    datosOrdenesGlobales = datosOrdenesGlobales.concat(items);
+
+                    if (data.paging) {
+                        totalPaginas = data.paging.total_pages || 1;
+                    } else {
+                        totalPaginas = 1;
+                    }
+
+                    paginaActual++;
+
+                } while (paginaActual <= totalPaginas);
+
+                console.log("Total de órdenes sincronizadas:", datosOrdenesGlobales.length);
+                procesarYMostrarDatos(datosOrdenesGlobales);
+
+            } catch (error) {
+                console.warn('Error de conexión v2:', error);
+                alert('No se pudo conectar a través del proxy. Revisa la consola (F12) para detalles.');
+            } finally {
+                if (icon) icon.classList.remove('fa-spin');
+            }
+        }
+
+        function procesarYMostrarDatos(ordenes) {
+            const totalOrdenes = ordenes.length;
+            const ingresosTotales = ordenes.reduce((acc, o) => acc + (parseFloat(o.total || o.payed || 0)), 0);
+            
+            const entregados = ordenes.filter(o => {
+                let st = o.status?.name || o.status || '';
+                return st === 'Completado' || st === 'Entregado';
+            }).length;
+
+            const enProceso = ordenes.filter(o => {
+                let st = o.status?.name || o.status || '';
+                return st !== 'Completado' && st !== 'Entregado';
+            }).length;
+
+            const eficiencia = totalOrdenes > 0 ? Math.round((entregados / totalOrdenes) * 100) : 0;
+
+            document.getElementById('kpiTotalOrdenes').innerText = totalOrdenes;
+            document.getElementById('kpiIngresos').innerText = '$' + ingresosTotales.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+            document.getElementById('kpiEntregados').innerText = entregados;
+            document.getElementById('kpiTasaEficiencia').innerText = eficiencia + '% completado';
+            document.getElementById('kpiEnProceso').innerText = enProceso;
+
+            const tbody = document.getElementById('tablaOrdenesCuerpo');
+            tbody.innerHTML = '';
+
+            ordenes.forEach(o => {
+                let numeroOrden = o.number || o.id || 'S/N';
+                let fechaCruda = o.created_at || o.date;
+                let fecha = fechaCruda ? new Date(fechaCruda).toLocaleDateString('es-MX', { year: 'numeric', month: 'short', day: 'numeric' }) : 'Reciente';
+
+                let cliente = o.client?.name || o.clientName || 'Cliente General';
+                let equipo = o.asset?.title || o.deviceName || 'Equipo de taller';
+                
+                let statusText = o.status?.name || o.status || 'Nuevo';
+                let badgeColor = 'bg-blue-50 text-blue-700';
+                if (statusText === 'Completado' || statusText === 'Entregado') badgeColor = 'bg-emerald-50 text-emerald-700';
+                if (statusText === 'En Proceso') badgeColor = 'bg-amber-50 text-amber-700';
+
+                let montoTotal = parseFloat(o.total || o.payed || 0);
+
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50/50 transition';
+                tr.innerHTML = `
+                    <td class="py-4 px-6 font-semibold text-slate-900">#${numeroOrden}</td>
+                    <td class="py-4 px-6 text-slate-500">${fecha}</td>
+                    <td class="py-4 px-6 font-medium">${cliente}</td>
+                    <td class="py-4 px-6 text-slate-600">${equipo}</td>
+                    <td class="py-4 px-6"><span class="${badgeColor} px-2.5 py-1 rounded-full text-xs font-semibold">${statusText}</span></td>
+                    <td class="py-4 px-6 text-right font-bold text-slate-900">$${montoTotal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            actualizarGraficos(ordenes);
+        }
+
+        function inicializarGraficosDefault() {
+            const ctx1 = document.getElementById('chartEstados').getContext('2d');
+            chartEstadosInstance = new Chart(ctx1, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Completados', 'En Proceso / Nuevos'],
+                    datasets: [{ data: [0, 0], backgroundColor: ['#10b981', '#f59e0b'], borderWidth: 0 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+            });
+
+            const ctx2 = document.getElementById('chartIngresos').getContext('2d');
+            chartIngresosInstance = new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{ label: 'Ingresos ($)', data: [], backgroundColor: '#6366f1', borderRadius: 8 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+        }
+
+        function actualizarGraficos(ordenes) {
+            const completados = ordenes.filter(o => {
+                let st = o.status?.name || o.status || '';
+                return st === 'Completado' || st === 'Entregado';
+            }).length;
+
+            const otros = ordenes.length - completados;
+
+            chartEstadosInstance.data.datasets[0].data = [completados, otros];
+            chartEstadosInstance.update();
+
+            // Limitamos las barras del gráfico de ingresos recientes para no saturar visualmente la gráfica con 700 barras
+            const ultimasOrdenes = ordenes.slice(-20);
+            chartIngresosInstance.data.labels = ultimasOrdenes.map(o => `#${o.number || o.id}`);
+            chartIngresosInstance.data.datasets[0].data = ultimasOrdenes.map(o => parseFloat(o.total || o.payed || 0));
+            chartIngresosInstance.update();
+        }
+
+        function filtrarTabla() {
+            const filtro = document.getElementById('searchInput').value.toLowerCase();
+            const filtradas = datosOrdenesGlobales.filter(o => 
+                (o.client?.name && o.client.name.toLowerCase().includes(filtro)) ||
+                (o.asset?.title && o.asset.title.toLowerCase().includes(filtro)) ||
+                (o.number && String(o.number).toLowerCase().includes(filtro)) ||
+                (o.status?.name && o.status.name.toLowerCase().includes(filtro))
+            );
+            
+            const tbody = document.getElementById('tablaOrdenesCuerpo');
+            tbody.innerHTML = '';
+            
+            filtradas.forEach(o => {
+                let numeroOrden = o.number || o.id || 'S/N';
+                let fechaCruda = o.created_at || o.date;
+                let fecha = fechaCruda ? new Date(fechaCruda).toLocaleDateString('es-MX', { year: 'numeric', month: 'short', day: 'numeric' }) : 'Reciente';
+                let cliente = o.client?.name || 'Cliente General';
+                let equipo = o.asset?.title || 'Equipo de taller';
+                let statusText = o.status?.name || o.status || 'Nuevo';
+                let badgeColor = 'bg-blue-50 text-blue-700';
+                if (statusText === 'Completado' || statusText === 'Entregado') badgeColor = 'bg-emerald-50 text-emerald-700';
+                if (statusText === 'En Proceso') badgeColor = 'bg-amber-50 text-amber-700';
+                let montoTotal = parseFloat(o.total || o.payed || 0);
+
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50/50 transition';
+                tr.innerHTML = `
+                    <td class="py-4 px-6 font-semibold text-slate-900">#${numeroOrden}</td>
+                    <td class="py-4 px-6 text-slate-500">${fecha}</td>
+                    <td class="py-4 px-6 font-medium">${cliente}</td>
+                    <td class="py-4 px-6 text-slate-600">${equipo}</td>
+                    <td class="py-4 px-6"><span class="${badgeColor} px-2.5 py-1 rounded-full text-xs font-semibold">${statusText}</span></td>
+                    <td class="py-4 px-6 text-right font-bold text-slate-900">$${montoTotal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+    </script>
+</body>
+</html>

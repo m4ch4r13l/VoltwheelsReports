@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VoltWheels - Reporte Financiero Santa Tere</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome para iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            cursor: pointer;
+        }
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white !important; padding: 0 !important; }
+            .print-shadow { box-shadow: none !important; border: 1px solid #e2e8f0 !important; }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen">
+
+    <!-- Encabezado Superior -->
+    <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-emerald-600 p-2 rounded-xl text-white">
+                    <i class="fa-solid fa-cash-register text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg tracking-tight">VoltWheels <span class="text-emerald-400 font-normal text-sm">| Finanzas Santa Tere</span></h1>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-3">
+                <!-- Botón de Menú Apps -->
+                <div class="relative">
+                    <button onclick="toggleMenuNavegacion()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2 rounded-xl text-sm font-medium transition flex items-center space-x-2 shadow-sm">
+                        <i class="fa-solid fa-bars"></i>
+                        <span class="hidden sm:inline">Menú Apps</span>
+                    </button>
+                    <div id="menuNavegacion" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl py-2 border border-slate-100 z-50 text-slate-700">
+                        <a href="index.html" class="flex items-center px-4 py-2.5 text-sm hover:bg-slate-50 transition">
+                            <i class="fa-solid fa-clipboard-list w-5 mr-2 text-indigo-600"></i> Órdenes de Taller
+                        </a>
+                        <a href="finanzas.html" class="flex items-center px-4 py-2.5 text-sm font-semibold bg-emerald-50 text-emerald-700">
+                            <i class="fa-solid fa-cash-register w-5 mr-2"></i> Finanzas / Caja
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Selector de Periodo / Fechas -->
+                <div class="hidden md:flex items-center space-x-2 bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-700 text-xs">
+                    <span class="text-slate-400">Desde:</span>
+                    <input type="date" id="fechaInicio" onchange="cambiarFiltroFechas()" class="bg-transparent text-white focus:outline-none">
+                    <span class="text-slate-400">Hasta:</span>
+                    <input type="date" id="fechaFin" onchange="cambiarFiltroFechas()" class="bg-transparent text-white focus:outline-none">
+                </div>
+
+                <button onclick="abrirConfig()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3.5 py-2 rounded-xl text-sm font-medium transition flex items-center space-x-2 border border-slate-700">
+                    <i class="fa-solid fa-key"></i>
+                    <span class="hidden sm:inline">Token API</span>
+                </button>
+                <button onclick="sincronizarFinanzas()" id="btnSync" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-sm font-medium transition flex items-center space-x-2 shadow-sm">
+                    <i class="fa-solid fa-rotate" id="syncIcon"></i>
+                    <span>Sincronizar</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Contenedor Principal -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+        <!-- Barra de Rangos Rápidos -->
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center space-x-2 text-sm font-semibold text-slate-700">
+                <i class="fa-solid fa-calendar-days text-emerald-600"></i>
+                <span>Periodo del Reporte:</span>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+                <button onclick="seleccionarPeriodo('hoy')" id="btn-hoy" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 transition">Hoy</button>
+                <button onclick="seleccionarPeriodo('ayer')" id="btn-ayer" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition">Ayer</button>
+                <button onclick="seleccionarPeriodo('esta_semana')" id="btn-esta_semana" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition">Esta Semana</button>
+                <button onclick="seleccionarPeriodo('semana_pasada')" id="btn-semana_pasada" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition">Semana Pasada</button>
+                <button onclick="seleccionarPeriodo('mes_actual')" id="btn-mes_actual" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition">Este Mes</button>
+                <button onclick="seleccionarPeriodo('mes_pasado')" id="btn-mes_pasado" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition">Mes Pasado</button>
+            </div>
+        </div>
+
+        <!-- Banner de Bienvenida -->
+        <div id="welcomeBanner" class="bg-gradient-to-r from-emerald-900 to-slate-900 text-white p-6 rounded-2xl shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div class="space-y-2">
+                <h2 class="text-xl font-bold flex items-center gap-2">
+                    <span>⚡ Corte Financiero - Sucursal Santa Tere</span>
+                </h2>
+                <p class="text-emerald-200 text-sm max-w-2xl">
+                    Monitoreo sincronizado mediante tu Cloudflare Worker fijo. Configura tu Token de API para comenzar.
+                </p>
+            </div>
+            <button onclick="abrirConfig()" class="bg-white text-emerald-900 hover:bg-emerald-50 px-5 py-2.5 rounded-xl font-semibold text-sm transition shadow whitespace-nowrap">
+                Ingresar Token
+            </button>
+        </div>
+
+        <!-- Tarjetas de Métricas (KPIs) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 print-shadow">
+                <div class="flex items-center justify-between text-slate-500 mb-2">
+                    <span class="text-xs font-bold uppercase tracking-wider">Balance Neto Periodo</span>
+                    <div class="p-2 bg-emerald-50 text-emerald-600 rounded-xl"><i class="fa-solid fa-wallet"></i></div>
+                </div>
+                <h3 class="text-3xl font-extrabold text-slate-900" id="kpiTotalIngresos">$0.00</h3>
+                <p class="text-xs text-emerald-600 font-medium mt-1">Ingresos menos gastos</p>
+            </div>
+            
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 print-shadow">
+                <div class="flex items-center justify-between text-slate-500 mb-2">
+                    <span class="text-xs font-bold uppercase tracking-wider">Efectivo Santa Tere</span>
+                    <div class="p-2 bg-green-50 text-green-600 rounded-xl"><i class="fa-solid fa-money-bill-wave"></i></div>
+                </div>
+                <h3 class="text-3xl font-extrabold text-slate-900" id="kpiEfectivo">$0.00</h3>
+                <p class="text-xs text-slate-400 mt-1">ID: 147032</p>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 print-shadow">
+                <div class="flex items-center justify-between text-slate-500 mb-2">
+                    <span class="text-xs font-bold uppercase tracking-wider">Tarjeta Santa Tere</span>
+                    <div class="p-2 bg-indigo-50 text-indigo-600 rounded-xl"><i class="fa-solid fa-credit-card"></i></div>
+                </div>
+                <h3 class="text-3xl font-extrabold text-slate-900" id="kpiTarjeta">$0.00</h3>
+                <p class="text-xs text-slate-400 mt-1">ID: 147033</p>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 print-shadow">
+                <div class="flex items-center justify-between text-slate-500 mb-2">
+                    <span class="text-xs font-bold uppercase tracking-wider">Transferencia Santa Tere</span>
+                    <div class="p-2 bg-blue-50 text-blue-600 rounded-xl"><i class="fa-solid fa-building-columns"></i></div>
+                </div>
+                <h3 class="text-3xl font-extrabold text-slate-900" id="kpiTransferencia">$0.00</h3>
+                <p class="text-xs text-slate-400 mt-1">ID: 163856</p>
+            </div>
+        </div>
+
+        <!-- Gráfico y Resumen -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 print-shadow lg:col-span-2">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="font-bold text-slate-800 text-base">Distribución por Método</h2>
+                    <button onclick="window.print()" class="no-print text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-print"></i> Imprimir Reporte
+                    </button>
+                </div>
+                <div class="relative h-64 flex justify-center">
+                    <canvas id="chartMetodos"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 print-shadow flex flex-col justify-between">
+                <div>
+                    <h2 class="font-bold text-slate-800 text-base mb-2">Resumen General</h2>
+                    <p class="text-xs text-slate-400 mb-6">Movimientos del periodo seleccionado.</p>
+                    
+                    <div class="space-y-4 text-sm">
+                        <div class="flex justify-between pb-2 border-b border-slate-100">
+                            <span class="text-slate-500">Total Movimientos:</span>
+                            <span class="font-bold text-slate-800" id="lblTotalTransacciones">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 pt-4 border-t border-slate-100">
+                    <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-100 text-center">
+                        <span class="text-xs text-emerald-700 font-semibold block uppercase">Balance Total Periodo</span>
+                        <span class="text-2xl font-black text-emerald-800" id="lblTotalCaja">$0.00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabla -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden print-shadow">
+            <div class="p-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h2 class="font-bold text-slate-800 text-base">Detalle de Transacciones (Santa Tere)</h2>
+                    <p class="text-xs text-slate-500">Mostrando registros entre las fechas seleccionadas.</p>
+                </div>
+                <div class="flex items-center gap-3 w-full sm:w-auto">
+                    <input type="text" id="searchInput" onkeyup="filtrarTabla()" placeholder="Buscar en transacciones..." class="w-full sm:w-64 bg-slate-50 border border-slate-200 text-sm rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-slate-50/75 text-slate-500 uppercase text-xs tracking-wider border-b border-slate-100">
+                            <th class="py-3.5 px-6 font-semibold">Cuenta / Método</th>
+                            <th class="py-3.5 px-6 font-semibold">Tipo</th>
+                            <th class="py-3.5 px-6 font-semibold">Fecha y Hora</th>
+                            <th class="py-3.5 px-6 font-semibold">Descripción / Detalle</th>
+                            <th class="py-3.5 px-6 font-semibold text-right">Monto ($)</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 text-slate-700" id="tablaTransaccionesCuerpo">
+                        <tr>
+                            <td colspan="5" class="py-12 text-center text-slate-400">
+                                <i class="fa-solid fa-receipt text-3xl mb-2 block"></i>
+                                Sin datos sincronizados. Haz clic en "Sincronizar".
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modal Configuración -->
+    <div id="configModal" class="fixed inset-0 z-50 bg-slate-900/65 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-6">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-4">
+                <h3 class="font-bold text-lg text-slate-900 flex items-center gap-2">
+                    <i class="fa-solid fa-key text-emerald-600"></i> Token de API Orderry
+                </h3>
+                <button onclick="cerrarConfig()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+            </div>
+            
+            <div class="space-y-4 text-sm">
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Bearer Token</label>
+                    <input type="password" id="inputApiKey" placeholder="Ingresa tu token..." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    <p class="text-xs text-slate-400 mt-1">El Worker ya está configurado de forma fija.</p>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-2">
+                <button onclick="cerrarConfig()" class="px-4 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 font-medium transition">Cancelar</button>
+                <button onclick="guardarConfig()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-medium transition shadow-sm">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script Principal -->
+    <script>
+        let chartMetodosInstance = null;
+        let transaccionesGlobales = [];
+
+        // URL fija de tu Cloudflare Worker
+        const URL_PROXY_FIJA = "https://orderry-proxy-voltwheels.machariel-p-f.workers.dev";
+
+        const CUENTAS_SANTA_TERE = [
+            { id: 147032, name: 'Efectivo Santa Tere', tipo: 'Efectivo' },
+            { id: 147033, name: 'Tarjeta Santa Tere', tipo: 'Tarjeta' },
+            { id: 163856, name: 'Transferencia Santa Tere', tipo: 'Transferencia' }
+        ];
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const apiKey = localStorage.getItem('orderry_api_key');
+            if (apiKey) document.getElementById('inputApiKey').value = apiKey;
+
+            seleccionarPeriodo('hoy');
+            inicializarGrafico();
+
+            if (apiKey) {
+                const banner = document.getElementById('welcomeBanner');
+                if (banner) banner.style.display = 'none';
+                sincronizarFinanzas();
+            }
+
+            window.addEventListener('click', (e) => {
+                const menu = document.getElementById('menuNavegacion');
+                const btn = e.target.closest('button');
+                if (!btn && menu && !menu.contains(e.target)) {
+                    menu.classList.add('hidden');
+                }
+            });
+        });
+
+        function seleccionarPeriodo(tipo) {
+            ['hoy', 'ayer', 'esta_semana', 'semana_pasada', 'mes_actual', 'mes_pasado'].forEach(t => {
+                const b = document.getElementById(`btn-${t}`);
+                if (b) {
+                    b.className = t === tipo 
+                        ? "px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 transition" 
+                        : "px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition";
+                }
+            });
+
+            const hoy = new Date();
+            let inicio = new Date();
+            let fin = new Date();
+
+            if (tipo === 'hoy') {
+                // Mantener fecha actual
+            } else if (tipo === 'ayer') {
+                inicio.setDate(hoy.getDate() - 1);
+                fin.setDate(hoy.getDate() - 1);
+            } else if (tipo === 'esta_semana') {
+                const diaSemana = hoy.getDay() || 7;
+                if (diaSemana !== 1) inicio.setDate(hoy.getDate() - (diaSemana - 1));
+            } else if (tipo === 'semana_pasada') {
+                const diaSemana = hoy.getDay() || 7;
+                inicio.setDate(hoy.getDate() - diaSemana - 6);
+                fin.setDate(hoy.getDate() - diaSemana);
+            } else if (tipo === 'mes_actual') {
+                inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+            } else if (tipo === 'mes_pasado') {
+                inicio = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
+                fin = new Date(hoy.getFullYear(), hoy.getMonth(), 0);
+            }
+
+            document.getElementById('fechaInicio').value = inicio.toISOString().split('T')[0];
+            document.getElementById('fechaFin').value = fin.toISOString().split('T')[0];
+
+            if (transaccionesGlobales.length > 0) {
+                procesarYMostrarDatos(transaccionesGlobales);
+            }
+        }
+
+        function cambiarFiltroFechas() {
+            ['hoy', 'ayer', 'esta_semana', 'semana_pasada', 'mes_actual', 'mes_pasado'].forEach(t => {
+                const b = document.getElementById(`btn-${t}`);
+                if (b) b.className = "px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition";
+            });
+            procesarYMostrarDatos(transaccionesGlobales);
+        }
+
+        function toggleMenuNavegacion() {
+            document.getElementById('menuNavegacion').classList.toggle('hidden');
+        }
+
+        function abrirConfig() { document.getElementById('configModal').classList.remove('hidden'); }
+        function cerrarConfig() { document.getElementById('configModal').classList.add('hidden'); }
+
+        function guardarConfig() {
+            const apiKey = document.getElementById('inputApiKey').value.trim();
+            if (!apiKey) {
+                alert('Por favor ingresa tu Token de API.');
+                return;
+            }
+            localStorage.setItem('orderry_api_key', apiKey);
+            const banner = document.getElementById('welcomeBanner');
+            if (banner) banner.style.display = 'none';
+            cerrarConfig();
+            sincronizarFinanzas();
+        }
+
+        function obtenerFechaLocal(isoString) {
+            if (!isoString) return '';
+            const fecha = new Date(isoString);
+            const anio = fecha.getFullYear();
+            const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+            const dia = String(fecha.getDate()).padStart(2, '0');
+            return `${anio}-${mes}-${dia}`;
+        }
+
+        async function sincronizarFinanzas() {
+            const apiKey = localStorage.getItem('orderry_api_key');
+            if (!apiKey) {
+                abrirConfig();
+                return;
+            }
+
+            const icon = document.getElementById('syncIcon');
+            if (icon) icon.classList.add('fa-spin');
+            
+            try {
+                transaccionesGlobales = [];
+
+                for (let cuenta of CUENTAS_SANTA_TERE) {
+                    let paginaActual = 1;
+                    let totalPaginas = 1;
+
+                    do {
+                        const response = await fetch(`${URL_PROXY_FIJA}/v2/finance/accounts/${cuenta.id}/transactions?page=${paginaActual}&limit=100`, {
+                            method: 'GET',
+                            headers: {
+                                'Authorization': `Bearer ${apiKey}`,
+                                'Accept': 'application/json'
+                            }
+                        });
+
+                        if (!response.ok) break;
+
+                        const data = await response.json();
+                        let items = data.data || data.transactions || (Array.isArray(data) ? data : []);
+                        
+                        items.forEach(item => {
+                            item.cuentaNombre = cuenta.name;
+                            item.cuentaTipo = cuenta.tipo;
+                        });
+
+                        let itemsActivos = items.filter(item => !item.deleted_at);
+                        transaccionesGlobales = transaccionesGlobales.concat(itemsActivos);
+
+                        if (data.paging) {
+                            totalPaginas = data.paging.total_pages || 1;
+                        } else {
+                            totalPaginas = 1;
+                        }
+
+                        paginaActual++;
+
+                    } while (paginaActual <= totalPaginas);
+                }
+
+                procesarYMostrarDatos(transaccionesGlobales);
+            } catch (error) {
+                console.warn('Error al sincronizar transacciones:', error);
+                alert('Hubo un problema al consultar las cuentas. Revisa la consola (F12).');
+            } finally {
+                if (icon) icon.classList.remove('fa-spin');
+            }
+        }
+
+        function procesarYMostrarDatos(transacciones) {
+            const fechaInicio = document.getElementById('fechaInicio').value;
+            const fechaFin = document.getElementById('fechaFin').value;
+
+            const filtradas = transacciones.filter(t => {
+                let fechaTx = t.created_at || t.date || '';
+                if (!fechaTx) return true;
+                let fechaLocalTx = obtenerFechaLocal(fechaTx);
+                if (fechaInicio && fechaFin) {
+                    return fechaLocalTx >= fechaInicio && fechaLocalTx <= fechaFin;
+                }
+                return true;
+            });
+
+            let totalIngresosEfectivo = 0;
+            let totalRetirosEfectivo = 0;
+            let totalTarjeta = 0;
+            let totalTransferencia = 0;
+
+            const tbody = document.getElementById('tablaTransaccionesCuerpo');
+            tbody.innerHTML = '';
+
+            if (filtradas.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="py-12 text-center text-slate-400">
+                            <i class="fa-solid fa-folder-open text-3xl mb-2 block"></i>
+                            No hay transacciones registradas en este periodo.
+                        </td>
+                    </tr>
+                `;
+            }
+
+            filtradas.forEach(t => {
+                let monto = parseFloat(t.amount || 0);
+                let tipo = t.cuentaTipo || 'Efectivo';
+                let direction = t.direction || (monto < 0 ? 'expense' : 'income');
+                let desc = t.description || t.note || '';
+                let descLower = desc.toLowerCase();
+
+                let esTransferenciaInterna = (descLower.includes('transferencia de dinero') || t.category_id === null) && monto < 0;
+
+                if (tipo === 'Efectivo') {
+                    if (esTransferenciaInterna) {
+                        totalTransferencia += Math.abs(monto);
+                    } else if (direction === 'expense' || monto < 0) {
+                        totalRetirosEfectivo += Math.abs(monto);
+                    } else {
+                        totalIngresosEfectivo += monto;
+                    }
+                } else if (tipo === 'Tarjeta') {
+                    totalTarjeta += Math.abs(monto);
+                } else if (tipo === 'Transferencia') {
+                    totalTransferencia += Math.abs(monto);
+                }
+
+                let fechaHora = t.created_at ? new Date(t.created_at).toLocaleString('es-MX', {dateStyle: 'short', timeStyle: 'short', hour12: true}) : 'Reciente';
+                
+                let badgeTipo = '';
+                if (esTransferenciaInterna) {
+                    badgeTipo = '<span class="bg-blue-50 text-blue-700 px-2 py-0.5 rounded text-xs font-semibold">Transferencia Global</span>';
+                } else if (direction === 'expense' || monto < 0) {
+                    badgeTipo = '<span class="bg-rose-50 text-rose-700 px-2 py-0.5 rounded text-xs font-semibold">Gasto / Retiro</span>';
+                } else {
+                    badgeTipo = '<span class="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded text-xs font-semibold">Ingreso</span>';
+                }
+
+                let badgeCuenta = tipo === 'Efectivo' ? 'bg-green-50 text-green-700' : (tipo === 'Tarjeta' ? 'bg-indigo-50 text-indigo-700' : 'bg-blue-50 text-blue-700');
+                let montoColor = monto < 0 ? 'text-rose-600 font-bold' : 'text-emerald-600 font-bold';
+
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50/50 transition';
+                tr.innerHTML = `
+                    <td class="py-4 px-6 font-semibold"><span class="${badgeCuenta} px-2.5 py-1 rounded-full text-xs font-semibold">${t.cuentaNombre}</span></td>
+                    <td class="py-4 px-6">${badgeTipo}</td>
+                    <td class="py-4 px-6 text-slate-500">${fechaHora}</td>
+                    <td class="py-4 px-6 font-medium text-slate-700 max-w-sm truncate" title="${desc}">${desc}</td>
+                    <td class="py-4 px-6 text-right ${montoColor}">$${monto.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            let efectivoNeto = totalIngresosEfectivo - totalRetirosEfectivo;
+
+            document.getElementById('kpiTotalIngresos').innerText = '$' + efectivoNeto.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+            document.getElementById('kpiEfectivo').innerText = '$' + totalIngresosEfectivo.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+            document.getElementById('kpiTarjeta').innerText = '$' + totalTarjeta.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+            document.getElementById('kpiTransferencia').innerText = '$' + totalTransferencia.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+
+            document.getElementById('lblTotalTransacciones').innerText = filtradas.length;
+            document.getElementById('lblTotalCaja').innerText = '$' + efectivoNeto.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+
+            actualizarGrafico([Math.max(0, totalIngresosEfectivo), Math.max(0, totalTarjeta), Math.max(0, totalTransferencia)]);
+        }
+
+        function inicializarGrafico() {
+            const ctx = document.getElementById('chartMetodos').getContext('2d');
+            chartMetodosInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Efectivo', 'Tarjeta', 'Transferencia'],
+                    datasets: [{ data: [0, 0, 0], backgroundColor: ['#10b981', '#6366f1', '#3b82f6'], borderWidth: 0 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+            });
+        }
+
+        function actualizarGrafico(valores) {
+            if (chartMetodosInstance) {
+                chartMetodosInstance.data.datasets[0].data = valores;
+                chartMetodosInstance.update();
+            }
+        }
+
+        function filtrarTabla() {
+            const filtro = document.getElementById('searchInput').value.toLowerCase();
+            const filtradas = transaccionesGlobales.filter(t => 
+                String(t.cuentaNombre || '').toLowerCase().includes(filtro) ||
+                String(t.description || '').toLowerCase().includes(filtro)
+            );
+            
+            const tbody = document.getElementById('tablaTransaccionesCuerpo');
+            tbody.innerHTML = '';
+            
+            filtradas.forEach(t => {
+                let monto = parseFloat(t.amount || 0);
+                let tipo = t.cuentaTipo || 'Efectivo';
+                let direction = t.direction || (monto < 0 ? 'expense' : 'income');
+                let descLower = (t.description || '').toLowerCase();
+                let esTransferenciaInterna = (descLower.includes('transferencia de dinero') || t.category_id === null) && monto < 0;
+
+                let badgeTipo = '';
+                if (esTransferenciaInterna) {
+                    badgeTipo = '<span class="bg-blue-50 text-blue-700 px-2 py-0.5 rounded text-xs font-semibold">Transferencia Global</span>';
+                } else if (direction === 'expense' || monto < 0) {
+                    badgeTipo = '<span class="bg-rose-50 text-rose-700 px-2 py-0.5 rounded text-xs font-semibold">Gasto / Retiro</span>';
+                } else {
+                    badgeTipo = '<span class="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded text-xs font-semibold">Ingreso</span>';
+                }
+
+                let badgeCuenta = tipo === 'Efectivo' ? 'bg-green-50 text-green-700' : (tipo === 'Tarjeta' ? 'bg-indigo-50 text-indigo-700' : 'bg-blue-50 text-blue-700');
+                let montoColor = monto < 0 ? 'text-rose-600 font-bold' : 'text-slate-900 font-bold';
+                let fechaHora = t.created_at ? new Date(t.created_at).toLocaleString('es-MX', {dateStyle: 'short', timeStyle: 'short', hour12: true}) : 'Reciente';
+
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50/50 transition';
+                tr.innerHTML = `
+                    <td class="py-4 px-6 font-semibold"><span class="${badgeCuenta} px-2.5 py-1 rounded-full text-xs font-semibold">${t.cuentaNombre}</span></td>
+                    <td class="py-4 px-6">${badgeTipo}</td>
+                    <td class="py-4 px-6 text-slate-500">${fechaHora}</td>
+                    <td class="py-4 px-6 font-medium text-slate-700">${t.description || 'Movimiento'}</td>
+                    <td class="py-4 px-6 text-right ${montoColor}">$${monto.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+    </script>
+</body>
+</html>
